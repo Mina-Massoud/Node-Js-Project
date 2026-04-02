@@ -1,0 +1,10 @@
+// TODO: Mostafa Shanab — API Test File (REST Client)
+// Write test requests for ALL endpoints across ALL modules:
+//
+// Users: POST /users/register, POST /users/login, GET /users/profile, GET /users
+// Products: GET /products, GET /products/:id, POST /products, PATCH /products/:id, DELETE /products/:id
+// Categories: GET /categories, GET /categories/:id, GET /categories/:id/products, POST /categories, PATCH /categories/:id, DELETE /categories/:id
+// Orders: GET /orders, GET /orders/:id, POST /orders, PATCH /orders/:id, DELETE /orders/:id
+//
+// Include example JSON bodies, Authorization headers, and query params (search, sort, pagination)
+// Use ### to separate requests. Base URL: http://localhost:5431
