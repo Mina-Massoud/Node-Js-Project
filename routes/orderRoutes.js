@@ -6,8 +6,8 @@
 // - DELETE /:id → auth → authorize("admin") → deleteOrder (admin only)
 // routes/orderRoutes.js
 import { Router } from "express";
-import auth from "../middlewares/auth.js";
-import authorize from "../middlewares/authorize.js";
+import { auth } from "../middlewares/auth.js";
+import { authorize } from "../middlewares/authorize.js";
 import {
   getOrders,
   getOrder,

@@ -58,7 +58,7 @@ export const login = async (req, res, next) => {
     const isMatch = await user.matchPassword(password);
     if (!isMatch) throw new AppError("Invalid email or password", 401);
 
-    const token = generateToken({ userId: user._id });
+    const token = generateToken(user._id, user.role);
 
     res.status(200).json({
       success: true,

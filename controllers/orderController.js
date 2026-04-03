@@ -6,14 +6,14 @@
 // - deleteOrder: admin only. findByIdAndDelete, 404 if not found.
 
 import Order from "../models/Order.js";
-import asyncHandler from "../utils/asyncHandler.js";
+
 
 // ========================
 // GET /orders
 // Admin → all orders | User → own orders
 // Query: page, limit, status
 // ========================
-export const getOrders = asyncHandler(async (req, res) => {
+export const getOrders = async (req, res) => {
   const { page = 1, limit = 10, status } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
@@ -38,13 +38,13 @@ export const getOrders = asyncHandler(async (req, res) => {
     pages: Math.ceil(total / Number(limit)),
     data: orders,
   });
-});
+};
 
 // ========================
 // GET /orders/:id
 // Admin → any order | User → own order only
 // ========================
-export const getOrder = asyncHandler(async (req, res) => {
+export const getOrder = async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate("user", "name email")
     .populate("items.product", "name price");
@@ -65,13 +65,13 @@ export const getOrder = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ success: true, data: order });
-});
+};
 
 // ========================
 // POST /orders
 // Authenticated users
 // ========================
-export const createOrder = asyncHandler(async (req, res) => {
+export const createOrder = async (req, res) => {
   const { items, shippingAddress } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -106,13 +106,13 @@ export const createOrder = asyncHandler(async (req, res) => {
   });
 
   res.status(201).json({ success: true, data: order });
-});
+};
 
 // ========================
 // PUT /orders/:id
 // Admin only — full order replacement
 // ========================
-export const updateOrder = asyncHandler(async (req, res) => {
+export const updateOrder = async (req, res) => {
   const { items, shippingAddress, status } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
@@ -158,13 +158,13 @@ export const updateOrder = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ success: true, data: order });
-});
+};
 
 // ========================
 // PATCH /orders/:id
 // Admin only — partial update (status only)
 // ========================
-export const updateOrderStatus = asyncHandler(async (req, res) => {
+export const updateOrderStatus = async (req, res) => {
   const { status } = req.body;
 
   if (!status) {
@@ -186,13 +186,13 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ success: true, data: order });
-});
+};
 
 // ========================
 // DELETE /orders/:id
 // Admin only
 // ========================
-export const deleteOrder = asyncHandler(async (req, res) => {
+export const deleteOrder = async (req, res) => {
   const order = await Order.findByIdAndDelete(req.params.id);
 
   if (!order) {
@@ -202,4 +202,4 @@ export const deleteOrder = asyncHandler(async (req, res) => {
   }
 
   res.status(200).json({ success: true, message: "Order deleted successfully" });
-});
+};

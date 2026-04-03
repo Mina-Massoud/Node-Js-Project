@@ -1,6 +1,8 @@
 import express from "express";
 import dotenv from "dotenv";
+import swaggerUi from "swagger-ui-express";
 import connectDB from "./config/db.js";
+import swaggerSpec from "./config/swagger.js";
 import userRoutes from "./routes/userRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
@@ -16,6 +18,8 @@ const app = express();
 app.use(express.json());
 app.use(logger);
 app.use(rateLimiter);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/users", userRoutes);
 app.use("/products", productRoutes);
