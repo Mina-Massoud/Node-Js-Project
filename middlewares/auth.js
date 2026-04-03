@@ -1,7 +1,21 @@
-// TODO: Youssef Tarek — Authentication Middleware
-// - Read Authorization header (Bearer token)
-// - Verify JWT token using jwt.verify()
-// - Find user by decoded ID, attach to req.user
-// - Reject with 401 if no token, invalid token, or user not found
-const auth = (req, res, next) => next();
-export default auth;
+import User from "../models/User.js";
+import { AppError } from "../utils/classError.js";
+import { verifyToken } from "../utils/generateToken.js";
+
+export const auth = async (req, res, next) => {
+  try {
+    const { token } = req.headers;
+    if (!token) throw new AppError("Token not provided", 401);
+
+    const decoded = verifyToken(token);
+    if (!decoded?.userId) throw new AppError("Invalid token", 401);
+
+    const user = await User.findById(decoded.userId);
+    if (!user) throw new AppError("User not found", 404);
+
+    req.user = user;
+    next();
+  } catch (error) {
+    next(error);
+  }
+};

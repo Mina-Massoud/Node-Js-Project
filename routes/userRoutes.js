@@ -1,8 +1,18 @@
-// TODO: Youssef Tarek — User Routes
-// - POST /register → register (public)
-// - POST /login → login (public)
-// - GET /profile → auth → getProfile (authenticated)
-// - GET / → auth → authorize("admin") → getUsers (admin only)
 import { Router } from "express";
-const router = Router();
-export default router;
+import { register, login, getProfile, getUsers } from "../controllers/userController.js";
+import { auth } from "../middlewares/auth.js";
+import { authorize } from "../middlewares/authorize.js";
+
+const userRoutes = Router();
+
+// Public routes
+userRoutes.post("/register", register);
+userRoutes.post("/login", login);
+
+// Authenticated routes
+userRoutes.get("/profile", auth, getProfile);
+
+// Admin only routes
+userRoutes.get("/", auth, authorize("admin"), getUsers);
+
+export default userRoutes;
