@@ -8,3 +8,445 @@
 //
 // Include example JSON bodies, Authorization headers, and query params (search, sort, pagination)
 // Use ### to separate requests. Base URL: http://localhost:5431
+# ============================================================
+#   REST Client Test File — Full API Coverage
+#   Author : Mostafa Shanab
+#   Base URL: http://localhost:5431
+#
+#   HOW TO USE:
+#   1. Install the "REST Client" extension in VS Code
+#   2. Click "Send Request" above any request block
+#   3. After login, copy the token from the response
+#      and paste it in the @adminToken or @userToken variable
+# ============================================================
+
+@baseUrl = http://localhost:5431
+
+# ── Paste your tokens here after running the login requests ──
+@adminToken = PASTE_ADMIN_TOKEN_HERE
+@userToken  = PASTE_USER_TOKEN_HERE
+
+# ── Paste real IDs here after creating records ──
+@categoryId = PASTE_CATEGORY_ID_HERE
+@productId  = PASTE_PRODUCT_ID_HERE
+@orderId    = PASTE_ORDER_ID_HERE
+@userId     = PASTE_USER_ID_HERE
+
+
+# ================================================================
+#  MODULE 1 — USERS
+# ================================================================
+
+### 1-1  Register a new admin user
+POST {{baseUrl}}/users/register
+Content-Type: application/json
+
+{
+  "name": "Admin User",
+  "email": "admin@test.com",
+  "password": "Admin@1234",
+  "role": "admin"
+}
+
+###
+
+### 1-2  Register a regular user
+POST {{baseUrl}}/users/register
+Content-Type: application/json
+
+{
+  "name": "Regular User",
+  "email": "user@test.com",
+  "password": "User@1234",
+  "role": "user"
+}
+
+###
+
+### 1-3  Login as admin  →  copy token into @adminToken above
+POST {{baseUrl}}/users/login
+Content-Type: application/json
+
+{
+  "email": "admin@test.com",
+  "password": "Admin@1234"
+}
+
+###
+
+### 1-4  Login as regular user  →  copy token into @userToken above
+POST {{baseUrl}}/users/login
+Content-Type: application/json
+
+{
+  "email": "user@test.com",
+  "password": "User@1234"
+}
+
+###
+
+### 1-5  Get current user's profile  (requires token)
+GET {{baseUrl}}/users/profile
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 1-6  Get all users  (admin only)
+GET {{baseUrl}}/users
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 1-7  Get all users — should fail (user role)
+GET {{baseUrl}}/users
+Authorization: Bearer {{userToken}}
+
+###
+
+### 1-8  Get all users — should fail (no token)
+GET {{baseUrl}}/users
+
+
+# ================================================================
+#  MODULE 2 — CATEGORIES
+# ================================================================
+
+### 2-1  Get all categories  (public — no token needed)
+GET {{baseUrl}}/categories
+
+###
+
+### 2-2  Get all categories with pagination
+GET {{baseUrl}}/categories?page=1&limit=5
+
+###
+
+### 2-3  Get single category by ID  (public)
+GET {{baseUrl}}/categories/{{categoryId}}
+
+###
+
+### 2-4  Get single category — wrong ID (expect 404)
+GET {{baseUrl}}/categories/000000000000000000000000
+
+###
+
+### 2-5  Get all products under a specific category  (public)
+GET {{baseUrl}}/categories/{{categoryId}}/products
+
+###
+
+### 2-6  Create a category  (admin only)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Electronics",
+  "description": "All electronic devices and accessories"
+}
+
+###
+
+### 2-7  Create another category
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Books",
+  "description": "Educational and fiction books"
+}
+
+###
+
+### 2-8  Create category — duplicate name (expect 400)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Electronics"
+}
+
+###
+
+### 2-9  Create category — missing name (expect 400)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "description": "No name provided"
+}
+
+###
+
+### 2-10  Create category — should fail (user role, expect 403)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "name": "Forbidden Category"
+}
+
+###
+
+### 2-11  Create category — should fail (no token, expect 401)
+POST {{baseUrl}}/categories
+Content-Type: application/json
+
+{
+  "name": "No Token Category"
+}
+
+###
+
+### 2-12  Update category  (admin only)
+PATCH {{baseUrl}}/categories/{{categoryId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "description": "Updated description for electronics"
+}
+
+###
+
+### 2-13  Update category — wrong ID (expect 404)
+PATCH {{baseUrl}}/categories/000000000000000000000000
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Ghost Category"
+}
+
+###
+
+### 2-14  Delete category  (admin only)
+DELETE {{baseUrl}}/categories/{{categoryId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 2-15  Delete category — wrong ID (expect 404)
+DELETE {{baseUrl}}/categories/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+
+# ================================================================
+#  MODULE 3 — PRODUCTS
+# ================================================================
+
+### 3-1  Get all products  (public)
+GET {{baseUrl}}/products
+
+###
+
+### 3-2  Get all products with search, sort, and pagination
+GET {{baseUrl}}/products?search=phone&sort=price&page=1&limit=5
+
+###
+
+### 3-3  Get products sorted by price ascending
+GET {{baseUrl}}/products?sort=price&order=asc
+
+###
+
+### 3-4  Get single product by ID  (public)
+GET {{baseUrl}}/products/{{productId}}
+
+###
+
+### 3-5  Get single product — wrong ID (expect 404)
+GET {{baseUrl}}/products/000000000000000000000000
+
+###
+
+### 3-6  Create a product  (admin only)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "iPhone 15",
+  "description": "Apple smartphone with A16 chip",
+  "price": 999.99,
+  "stock": 50,
+  "category": "{{categoryId}}"
+}
+
+###
+
+### 3-7  Create a product — missing required fields (expect 400)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "description": "No name or price"
+}
+
+###
+
+### 3-8  Create product — should fail (user role, expect 403)
+POST {{baseUrl}}/products
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "name": "Hacked Product",
+  "price": 1,
+  "category": "{{categoryId}}"
+}
+
+###
+
+### 3-9  Update product  (admin only)
+PATCH {{baseUrl}}/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "price": 899.99,
+  "stock": 30
+}
+
+###
+
+### 3-10  Update product — wrong ID (expect 404)
+PATCH {{baseUrl}}/products/000000000000000000000000
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "price": 1
+}
+
+###
+
+### 3-11  Delete product  (admin only)
+DELETE {{baseUrl}}/products/{{productId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 3-12  Delete product — wrong ID (expect 404)
+DELETE {{baseUrl}}/products/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+
+# ================================================================
+#  MODULE 4 — ORDERS
+# ================================================================
+
+### 4-1  Get all orders  (admin only)
+GET {{baseUrl}}/orders
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-2  Get all orders with pagination
+GET {{baseUrl}}/orders?page=1&limit=10
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-3  Get single order by ID
+GET {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-4  Get single order — wrong ID (expect 404)
+GET {{baseUrl}}/orders/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-5  Create an order  (authenticated user)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{userToken}}
+
+{
+  "products": [
+    {
+      "product": "{{productId}}",
+      "quantity": 2
+    }
+  ]
+}
+
+###
+
+### 4-6  Create an order as admin
+POST {{baseUrl}}/orders
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "products": [
+    {
+      "product": "{{productId}}",
+      "quantity": 1
+    }
+  ]
+}
+
+###
+
+### 4-7  Create order — should fail (no token, expect 401)
+POST {{baseUrl}}/orders
+Content-Type: application/json
+
+{
+  "products": [
+    {
+      "product": "{{productId}}",
+      "quantity": 1
+    }
+  ]
+}
+
+###
+
+### 4-8  Update order status  (admin only)
+PATCH {{baseUrl}}/orders/{{orderId}}
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "status": "shipped"
+}
+
+###
+
+### 4-9  Update order — wrong ID (expect 404)
+PATCH {{baseUrl}}/orders/000000000000000000000000
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "status": "delivered"
+}
+
+###
+
+### 4-10  Delete order  (admin only)
+DELETE {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-11  Delete order — wrong ID (expect 404)
+DELETE {{baseUrl}}/orders/000000000000000000000000
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 4-12  Delete order — should fail (user role, expect 403)
+DELETE {{baseUrl}}/orders/{{orderId}}
+Authorization: Bearer {{userToken}}
