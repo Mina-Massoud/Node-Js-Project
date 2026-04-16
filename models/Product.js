@@ -1,12 +1,4 @@
-// TODO: Ahmed Gaber — Product Model
-// - Fields: name (required), description, price (required Number), stock (default 0), category (ObjectId ref "Category", required), timestamps
-
 import { model, Schema } from "mongoose";
-
-
-// import Category from "../models/Category.js";
-
-//uncomment when Mostafa finish category
 
 const productSchema = new Schema({
     name: { type: String, required: true, trim: true },

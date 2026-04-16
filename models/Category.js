@@ -1,5 +1,3 @@
-// TODO: Mostafa Shanab — Category Model
-// - Fields: name (required, unique), description (optional). No timestamps.
 import { model, Schema } from "mongoose";
 
 const categorySchema = new Schema({

@@ -1,10 +1,3 @@
-// TODO: Noura Ali — Order Routes
-// - GET / → auth → getOrders (authenticated)
-// - GET /:id → auth → getOrder (authenticated, ownership check inside controller)
-// - POST / → auth → createOrder (authenticated)
-// - PATCH /:id → auth → authorize("admin") → updateOrderStatus (admin only)
-// - DELETE /:id → auth → authorize("admin") → deleteOrder (admin only)
-// routes/orderRoutes.js
 import { Router } from "express";
 import { auth } from "../middlewares/auth.js";
 import { authorize } from "../middlewares/authorize.js";

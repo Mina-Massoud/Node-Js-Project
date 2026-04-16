@@ -1,18 +1,36 @@
-// TODO: Noura Ali — Order Controller
-// - getOrders: admin sees all, regular user sees only own orders. Pagination (page/limit), filter by status. Populate user (name,email) and items.product (name,price). Sort by createdAt desc.
-// - getOrder: find by ID, populate user+items.product. Ownership check: admin can view any, user can only view their own (403 otherwise).
-// - createOrder: validate items non-empty + shippingAddress required. Calculate totalPrice = sum(item.price * item.quantity). Set user from req.user._id.
-// - updateOrderStatus: admin only. Validate status field required. findByIdAndUpdate.
-// - deleteOrder: admin only. findByIdAndDelete, 404 if not found.
-
 import Order from "../models/Order.js";
+import Product from "../models/Product.js";
 
+const USER_FIELDS = "firstName lastName email";
+const PRODUCT_FIELDS = "name price";
 
-// ========================
-// GET /orders
-// Admin → all orders | User → own orders
-// Query: page, limit, status
-// ========================
+const httpError = (message, status) => {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+};
+
+// Look up real prices server-side so clients can't tamper with them.
+const buildItemsWithServerPrices = async (items) => {
+  const productIds = items.map((i) => i.product);
+  const products = await Product.find({ _id: { $in: productIds } });
+  const priceMap = new Map(products.map((p) => [p._id.toString(), p.price]));
+
+  return items.map((item) => {
+    const id = item.product?.toString();
+    const price = priceMap.get(id);
+    if (price == null) throw httpError(`Product ${item.product} not found`, 400);
+    if (!item.quantity || item.quantity < 1) {
+      throw httpError("Each item must have a positive quantity", 400);
+    }
+    return { product: item.product, quantity: item.quantity, price };
+  });
+};
+
+const sumTotal = (items) =>
+  items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+
+// GET /orders — admin sees all, user sees own. Query: page, limit, status.
 export const getOrders = async (req, res) => {
   const { page = 1, limit = 10, status } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
@@ -23,8 +41,8 @@ export const getOrders = async (req, res) => {
 
   const [orders, total] = await Promise.all([
     Order.find(filter)
-      .populate("user", "name email")
-      .populate("items.product", "name price")
+      .populate("user", USER_FIELDS)
+      .populate("items.product", PRODUCT_FIELDS)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(Number(limit)),
@@ -40,138 +58,77 @@ export const getOrders = async (req, res) => {
   });
 };
 
-// ========================
-// GET /orders/:id
-// Admin → any order | User → own order only
-// ========================
+// GET /orders/:id — admin any, user own only.
 export const getOrder = async (req, res) => {
   const order = await Order.findById(req.params.id)
-    .populate("user", "name email")
-    .populate("items.product", "name price");
+    .populate("user", USER_FIELDS)
+    .populate("items.product", PRODUCT_FIELDS);
 
-  if (!order) {
-    const err = new Error("Order not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!order) throw httpError("Order not found", 404);
 
   if (
     req.user.role !== "admin" &&
     order.user._id.toString() !== req.user._id.toString()
   ) {
-    const err = new Error("Access denied: this order does not belong to you");
-    err.status = 403;
-    throw err;
+    throw httpError("Access denied: this order does not belong to you", 403);
   }
 
   res.status(200).json({ success: true, data: order });
 };
 
-// ========================
-// POST /orders
-// Authenticated users
-// ========================
+// POST /orders — authenticated users.
 export const createOrder = async (req, res) => {
   const { items, shippingAddress } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
-    const err = new Error("Order must contain at least one item");
-    err.status = 400;
-    throw err;
+    throw httpError("Order must contain at least one item", 400);
   }
+  if (!shippingAddress) throw httpError("Shipping address is required", 400);
 
-  if (!shippingAddress) {
-    const err = new Error("Shipping address is required");
-    err.status = 400;
-    throw err;
-  }
-
-  const hasInvalidItem = items.some((item) => item.price == null || item.quantity == null);
-  if (hasInvalidItem) {
-    const err = new Error("Each item must have price and quantity");
-    err.status = 400;
-    throw err;
-  }
-
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const enrichedItems = await buildItemsWithServerPrices(items);
 
   const order = await Order.create({
     user: req.user._id,
-    items,
-    totalPrice,
+    items: enrichedItems,
+    totalPrice: sumTotal(enrichedItems),
     shippingAddress,
   });
 
   res.status(201).json({ success: true, data: order });
 };
 
-// ========================
-// PUT /orders/:id
-// Admin only — full order replacement
-// ========================
+// PUT /orders/:id — admin only, full replacement.
 export const updateOrder = async (req, res) => {
   const { items, shippingAddress, status } = req.body;
 
   if (!items || !Array.isArray(items) || items.length === 0) {
-    const err = new Error("Order must contain at least one item");
-    err.status = 400;
-    throw err;
+    throw httpError("Order must contain at least one item", 400);
   }
+  if (!shippingAddress) throw httpError("Shipping address is required", 400);
+  if (!status) throw httpError("Status is required", 400);
 
-  if (!shippingAddress) {
-    const err = new Error("Shipping address is required");
-    err.status = 400;
-    throw err;
-  }
-
-  if (!status) {
-    const err = new Error("Status is required");
-    err.status = 400;
-    throw err;
-  }
-
-  const hasInvalidItem = items.some((item) => item.price == null || item.quantity == null);
-  if (hasInvalidItem) {
-    const err = new Error("Each item must have price and quantity");
-    err.status = 400;
-    throw err;
-  }
-
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const enrichedItems = await buildItemsWithServerPrices(items);
 
   const order = await Order.findByIdAndUpdate(
     req.params.id,
-    { items, shippingAddress, status, totalPrice },
-    { new: true, runValidators: true}
+    {
+      items: enrichedItems,
+      shippingAddress,
+      status,
+      totalPrice: sumTotal(enrichedItems),
+    },
+    { new: true, runValidators: true }
   );
 
-  if (!order) {
-    const err = new Error("Order not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!order) throw httpError("Order not found", 404);
 
   res.status(200).json({ success: true, data: order });
 };
 
-// ========================
-// PATCH /orders/:id
-// Admin only — partial update (status only)
-// ========================
+// PATCH /orders/:id — admin only, status only.
 export const updateOrderStatus = async (req, res) => {
   const { status } = req.body;
-
-  if (!status) {
-    const err = new Error("Status field is required");
-    err.status = 400;
-    throw err;
-  }
+  if (!status) throw httpError("Status field is required", 400);
 
   const order = await Order.findByIdAndUpdate(
     req.params.id,
@@ -179,27 +136,17 @@ export const updateOrderStatus = async (req, res) => {
     { new: true, runValidators: true }
   );
 
-  if (!order) {
-    const err = new Error("Order not found");
-    err.status = 404;
-    throw err;
-  }
+  if (!order) throw httpError("Order not found", 404);
 
   res.status(200).json({ success: true, data: order });
 };
 
-// ========================
-// DELETE /orders/:id
-// Admin only
-// ========================
+// DELETE /orders/:id — admin only.
 export const deleteOrder = async (req, res) => {
   const order = await Order.findByIdAndDelete(req.params.id);
+  if (!order) throw httpError("Order not found", 404);
 
-  if (!order) {
-    const err = new Error("Order not found");
-    err.status = 404;
-    throw err;
-  }
-
-  res.status(200).json({ success: true, message: "Order deleted successfully" });
+  res
+    .status(200)
+    .json({ success: true, message: "Order deleted successfully" });
 };
