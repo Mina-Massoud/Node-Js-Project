@@ -1,6 +1,14 @@
 import mongoose from "mongoose";
 import Product from "../models/Product.js"
 
+const MAX_LIMIT = 100;
+const ALLOWED_PRODUCT_FIELDS = ["name", "description", "price", "stock", "category"];
+
+const clampPagination = (page, limit) => ({
+    pageNum: Math.max(1, parseInt(page) || 1),
+    limitNum: Math.min(MAX_LIMIT, Math.max(1, parseInt(limit) || 10)),
+});
+
 
 export const getProducts = async (req, res, next) => {
     try {
@@ -18,8 +26,7 @@ export const getProducts = async (req, res, next) => {
         }
 
         // pagination
-        let pageNum = parseInt(page) || 1
-        let limitNum = parseInt(limit) || 10
+        const { pageNum, limitNum } = clampPagination(page, limit);
 
         let skip = limitNum * (pageNum - 1)
 
@@ -45,6 +52,7 @@ export const getProducts = async (req, res, next) => {
             data: {
                 currentPage: pageNum,
                 numberOfPages,
+                limit: limitNum,
                 products
             }
         })
@@ -81,8 +89,14 @@ export const createProduct = async (req, res, next) => {
     try {
         let { name, description, price, stock, category } = req.body
 
-        if (!name || !price || !category) {
+        if (!name || price === undefined || !category) {
             return res.status(400).json({ success: false, message: "name , price and category are required" })
+        }
+        if (Number(price) < 0) {
+            return res.status(400).json({ success: false, message: "price must be non-negative" })
+        }
+        if (stock !== undefined && Number(stock) < 0) {
+            return res.status(400).json({ success: false, message: "stock must be non-negative" })
         }
         let productObj = {
             name,
@@ -110,14 +124,26 @@ export const updateProduct = async (req, res, next) => {
             });
         }
 
-        if (Object.keys(req.body).length === 0) {
+        const updates = ALLOWED_PRODUCT_FIELDS.reduce((acc, key) => {
+            if (req.body[key] !== undefined) acc[key] = req.body[key];
+            return acc;
+        }, {});
+
+        if (Object.keys(updates).length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "No data provided to update"
             });
         }
 
-        let product = await Product.findByIdAndUpdate(id, req.body, { new: true, runValidators: true })
+        if (updates.price !== undefined && Number(updates.price) < 0) {
+            return res.status(400).json({ success: false, message: "price must be non-negative" })
+        }
+        if (updates.stock !== undefined && Number(updates.stock) < 0) {
+            return res.status(400).json({ success: false, message: "stock must be non-negative" })
+        }
+
+        let product = await Product.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
 
         if (!product) {
             return res.status(404).json({ success: false, message: "There is no product with that id " })
